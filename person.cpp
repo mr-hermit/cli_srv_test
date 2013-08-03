@@ -11,9 +11,6 @@ namespace std{
 }
 #endif
 
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
-
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/base_object.hpp>
@@ -121,53 +118,4 @@ std::ostream & operator<<(std::ostream &os, const person_list &pl) {
 		os << **it << "\n"; 
 	}
 	return os;
-}
-
-void save_pslist(const person_list &pl, const char * filename) {
-	std::ofstream ofs(filename);
-	assert(ofs.good());
-	boost::archive::xml_oarchive oa(ofs);
-
-	oa << BOOST_SERIALIZATION_NVP(pl);
-}
-
-void restore_pslist(person_list &pl, const char * filename) {
-	std::ifstream ifs(filename);
-	assert(ifs.good());
-	boost::archive::xml_iarchive ia(ifs);
-
-	ia >> BOOST_SERIALIZATION_NVP(pl);
-}
-
-
-int main () {
-	student *p1 = new student("Ilya Zolotko", "Male", 26, "ABC-41", "4.1");
-	teacher *p2 = new teacher("Ludmila Zolotko", "Female", 24, "Energy", "Engineer");
-	teacher *p3 = new teacher("Abstract Ivanovich", "Male", 100, "Energy", "Engineer");
-
-	std::cout << "=== Print separate objects === \n";
-	std::cout << *(p1) << "\n";
-	std::cout << *(p2) << "\n";
-	std::cout << *(p3) << "\n";
-
-	std::cout << "=== Print persons list === \n";
-	person_list pl;
-	pl.append(p1);
-	pl.append(p2);
-	pl.append(p3);
-	std::cout << pl; 
-
-	std::string filename = "./demo_save.xml";
-	save_pslist(pl,filename.c_str());
-
-	std::cout << "=== Pring Loaded list === \n";
-	person_list pl2;
-	restore_pslist(pl2, filename.c_str());
-	std::cout << pl2;
-
-	delete p1;
-	delete p2;
-	delete p3;
-
-	return 0;
 }
