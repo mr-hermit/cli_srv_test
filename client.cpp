@@ -1,55 +1,40 @@
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <netdb.h>
+#include <iostream>
+#include <boost/array.hpp>
+#include <boost/asio.hpp>
 
-int main() {
-	int sockfd;
-	struct sockaddr_in server;
-	struct addrinfo *serverinfo;
-	const size_t bufflen = 4096;
-	ssize_t bytesreceived = 0;
-	char buff[bufflen];
-	const char * question = "Why r u doing this?";
+using boost::asio::ip::tcp;
 
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd == -1) {
-		perror("socket");
-		return 1;
-	}
-	
-	if (getaddrinfo("localhost", NULL, NULL, &serverinfo) != 0) {
-		perror("getaddrinfo");
-		return 1;
-	}
+int main(int argc, char* argv[]) {
+	try {
+		if (argc != 2) {
+			std::cerr << "Usage: client <host>" << std::endl;
+		}
 
-	memcpy(&server, serverinfo->ai_addr, sizeof(struct sockaddr_in));
-	server.sin_family = AF_INET;
-	server.sin_port = htons(1234);
-	freeaddrinfo(serverinfo);
+		boost::asio::io_service io_service;
 
-	if (connect(sockfd, (const struct sockaddr *) &server, sizeof(struct sockaddr_in)) == -1) {
-		perror("connect");
-		return 1;
+		tcp::resolver resolver(io_service);
+		tcp::resolver::query query(argv[1], "daytime");
+		tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+
+		tcp::socket socket(io_service);
+		boost::asio::connect(socket, endpoint_iterator);
+
+		for(;;) {
+			boost::array<char, 128> buf;
+			boost::system::error_code error;
+
+			size_t len = socket.read_some(boost::asio::buffer(buf), error);
+
+			if (error == boost::asio::error::eof)
+				break;
+			else if (error)
+				throw boost::system::system_error(error);
+
+			std::cout.write(buf.data(), len);
+		}
+	} catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
 	}
 
-	if (send(sockfd, question, (size_t) strlen(question)+1, 0) == -1) {
-		perror("send");
-		return 1;
-	}
-
-	bytesreceived = recv(sockfd, buff, bufflen, 0);
-	if (bytesreceived == -1) {
-		perror("recv");
-		return 1;
-	}
-	printf("%s\n", buff);
-
-	close(sockfd);
 	return 0;
 }
