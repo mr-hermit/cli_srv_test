@@ -12,9 +12,20 @@
 #include <cstdlib>
 #include <fstream>
 
+#include <boost/archive/xml_iarchive.hpp> // XML serialization
+#include "person.hpp"
+#include "crc.hpp"
+
 void s_error(const char * msg) {
 	perror(msg);
 	exit(1);
+}
+
+void load_pslist(person_list &pl, const char * filename) {
+	std::ifstream ifs(filename);
+	assert(ifs.good());
+	boost::archive::xml_iarchive ia(ifs);
+	ia >> BOOST_SERIALIZATION_NVP(pl);
 }
 
 int main() {
@@ -60,7 +71,9 @@ int main() {
 	xmlfd.open("demo_recv.xml", std::ios::binary);
 	if (xmlfd.is_open()) {
 		while ((r_bytes = recv(acceptfd, r_buff, r_buff_len, 0)) > 0) {
-			std::cout << "Received: " << r_bytes << std::endl;
+			std::cout << "Received: " << r_bytes ;
+			std::cout << "\tCRC: " << std::hex << getcrc(r_buff, r_buff_len);
+			std::cout << std::dec << std::endl;
 			xmlfd.write(r_buff, r_bytes);
 		}	
 	}

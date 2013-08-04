@@ -12,9 +12,20 @@
 #include <netdb.h>
 #include <cstdlib>
 
+#include <boost/archive/xml_oarchive.hpp>
+#include "person.hpp"
+#include "crc.hpp"
+
 void s_error(const char * msg) { 
 	perror(msg);
 	exit(1);
+}
+
+void sava_pslist(const person_list &pl, const char * filename) {
+	std::ofstream ofs(filename);
+	assert(ofs.good());
+	boost::archive::xml_oarchive oa(ofs);
+	oa << BOOST_SERIALIZATION_NVP(pl);
 }
 
 int main() {
@@ -45,7 +56,9 @@ int main() {
 			while (!xmlfd.eof()) {
 				xmlfd.read(r_buff, r_buff_len);
 				std::cout << "Read: " << xmlfd.gcount();
-				std::cout << "\tC.Pos: " << xmlfd.tellg() << std::endl;
+				std::cout << "\tC.Pos: " << xmlfd.tellg();
+				std::cout << "\tCRC: " << std::hex << getcrc(r_buff,r_buff_len);
+				std::cout << std::dec << std::endl;
 
 				if (send(sockfd, r_buff, (size_t) xmlfd.gcount(), 0) == -1)
 					s_error("send");
