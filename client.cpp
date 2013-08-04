@@ -1,3 +1,6 @@
+#include <iostream>
+#include <fstream>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -7,49 +10,54 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <netdb.h>
+#include <cstdlib>
+
+void s_error(const char * msg) { 
+	perror(msg);
+	exit(1);
+}
 
 int main() {
 	int sockfd;
 	struct sockaddr_in server;
 	struct addrinfo *serverinfo;
-	const size_t bufflen = 4096;
-	ssize_t bytesreceived = 0;
-	char buff[bufflen];
-	const char * question = "Why r u doing this?";
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd == -1) {
-		perror("socket");
-		return 1;
-	}
+	if (sockfd == -1) 
+		s_error("socket");
 	
-	if (getaddrinfo("localhost", NULL, NULL, &serverinfo) != 0) {
-		perror("getaddrinfo");
-		return 1;
-	}
+	if (getaddrinfo("localhost", NULL, NULL, &serverinfo) != 0) 
+		s_error("getaddrinfo");
 
 	memcpy(&server, serverinfo->ai_addr, sizeof(struct sockaddr_in));
 	server.sin_family = AF_INET;
 	server.sin_port = htons(1234);
 	freeaddrinfo(serverinfo);
 
-	if (connect(sockfd, (const struct sockaddr *) &server, sizeof(struct sockaddr_in)) == -1) {
-		perror("connect");
-		return 1;
-	}
+	if (connect(sockfd, (const struct sockaddr *) &server, sizeof(struct sockaddr_in)) != -1) {
 
-	if (send(sockfd, question, (size_t) strlen(question)+1, 0) == -1) {
-		perror("send");
-		return 1;
-	}
+		std::ifstream xmlfd;
+		const int r_buff_len = 1024;
+		char * r_buff = new char [r_buff_len];
+		
+		xmlfd.open("demo.xml", std::ios::in|std::ios::binary);
+		if (xmlfd.is_open()) {
+			while (!xmlfd.eof()) {
+				xmlfd.read(r_buff, r_buff_len);
+				std::cout << "Read: " << xmlfd.gcount();
+				std::cout << "\tC.Pos: " << xmlfd.tellg() << std::endl;
 
-	bytesreceived = recv(sockfd, buff, bufflen, 0);
-	if (bytesreceived == -1) {
-		perror("recv");
-		return 1;
-	}
-	printf("%s\n", buff);
+				if (send(sockfd, r_buff, (size_t) xmlfd.gcount(), 0) == -1)
+					s_error("send");
+			}
+		}	
+		else s_error("XML file");
 
-	close(sockfd);
+		xmlfd.close();
+
+		delete[] r_buff;
+		close(sockfd);
+	} else s_error("connect");
+
 	return 0;
 }
