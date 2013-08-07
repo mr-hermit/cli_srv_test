@@ -12,22 +12,16 @@
 #include <cstdlib>
 #include <fstream>
 
-#include <boost/archive/xml_iarchive.hpp> // XML serialization
 #include "person.hpp"
 #include "crc.hpp"
 
+/* Procedure that print error message and terminate the program */
 void s_error(const char * msg) {
 	perror(msg);
 	exit(1);
 }
 
-/*void load_pslist(person_list &pl, const char * filename) {
-	std::ifstream ifs(filename);
-	assert(ifs.good());
-	boost::archive::xml_iarchive ia(ifs);
-	ia >> BOOST_SERIALIZATION_NVP(pl);
-}*/
-
+/* Main program */
 int main() {
 	int sockfd;
 	int acceptfd;
@@ -35,10 +29,8 @@ int main() {
 	struct sockaddr_in server;
 	struct sockaddr_in client;
 	socklen_t clientaddrlen = 0;
-	const size_t bufflen = 1024;
-	ssize_t bytesreceived = 0;
-	char buff[bufflen];
-	const char * reply = "I want proof I can do more...";
+
+	std::string filename = "demo_server.xml";
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd == -1) 
@@ -68,35 +60,22 @@ int main() {
 	char * r_buff = new char [r_buff_len];
 	ssize_t r_bytes = 0;
 
-/*	boost::uint16_t cli_crc_buff = 0;
-	const int crc_buff_len = sizeof(cli_crc_buff);
-	ssize_t r_crc_bytes = 0; */
-
-	xmlfd.open("demo_recv.xml", std::ios::binary);
+	xmlfd.open(filename.c_str(), std::ios::binary);
 	if (xmlfd.is_open()) {
 		while ((r_bytes = recv(acceptfd, r_buff, r_buff_len, 0)) > 0) {
-
-/*			std::cout << "Received: " << r_bytes ;
-			std::cout << "\tCRC: " << std::hex << getcrc(r_buff, r_buff_len) << std::dec;
-
-			cli_crc_buff = getcrc(r_buff, r_buff_len);
-			if (send(acceptfd, &cli_crc_buff, crc_buff_len, 0) == -1)
-				s_error("send crc_buff");
-			cli_crc_buff = 0;
-
-			if ((r_crc_bytes = recv(acceptfd, &cli_crc_buff, crc_buff_len, 0)) > 0) {
-				std::cout << "\tCLI CRC: " << std::hex << cli_crc_buff << std::dec;
-				std::cout << r_bytes;
-				if (cli_crc_buff == getcrc(r_buff, r_bytes)) {
-					std::cout << "\tACCEPTED" << std::endl; */
-					xmlfd.write(r_buff, r_bytes);
-//				} else std::cout << "\tFAILED" << std::endl; 
-//			}
+			xmlfd.write(r_buff, r_bytes);
 		}	
 	}
 	else s_error("XML File");
 
 	xmlfd.close();
+
+	person_list pl;
+	load_pl(pl, filename.c_str());
+
+	std::cout << pl << std::endl;
+	
+	std::remove(filename.c_str());
 
 	if (close(acceptfd) == -1)
 		s_error("Close AcceptFD");
