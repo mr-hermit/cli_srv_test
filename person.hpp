@@ -18,6 +18,10 @@ namespace std{
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/assume_abstract.hpp>
 
+#include <boost/archive/xml_iarchive.hpp>
+#include <boost/archive/xml_oarchive.hpp>
+
+/* Basic class for all PERSON class */
 class person {
 	friend std::ostream & operator<<(std::ostream &os, const person &ps);
 	friend class boost::serialization::access;
@@ -49,6 +53,7 @@ std::ostream & operator<<(std::ostream &os, const person &ps) {
 	return os;
 }
 
+/* STUDENT class */
 class student : public person {
 	friend class boost::serialization::access;
 	std::string group;
@@ -70,6 +75,7 @@ public:
 	{}
 };
 
+/* TEACHER class */
 class teacher : public person {
 	friend class boost::serialization::access;
 	std::string chair;
@@ -91,6 +97,7 @@ public:
 	{}
 };
 
+/* PERSON_LIST - class that describe list of all PERSON objects */
 class person_list {
 	friend class boost::serialization::access;
 	friend std::ostream & operator<<(std::ostream &os, const person_list &pl);
@@ -118,4 +125,19 @@ std::ostream & operator<<(std::ostream &os, const person_list &pl) {
 		os << **it << "\n"; 
 	}
 	return os;
+}
+
+/* Procedure for serialize/de-serialize PERSON objects from and to XML file */ 
+void load_pl(person_list &pl, const char * filename) {
+	std::ifstream ifs(filename);
+	assert(ifs.good());
+	boost::archive::xml_iarchive ia(ifs);
+	ia >> BOOST_SERIALIZATION_NVP(pl);
+}
+
+void save_pl(const person_list &pl, const char * filename) {
+	std::ofstream ofs(filename);
+	assert(ofs.good());
+	boost::archive::xml_oarchive oa(ofs);
+	oa << BOOST_SERIALIZATION_NVP(pl);
 }
